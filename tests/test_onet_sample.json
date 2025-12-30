@@ -1,0 +1,50 @@
+[
+  {
+    "code": "11-1011.00",
+    "title": "Chief Executives",
+    "url": "https://www.onetonline.org/link/summary/11-1011.00",
+    "sections": {
+      "Tasks": {
+        "type": "list",
+        "items": [
+          "Direct or coordinate an organization's financial or budget activities to fund operations, maximize investments, or increase efficiency.",
+          "Confer with board members, organization officials, or staff members to discuss issues, coordinate activities, or resolve problems."
+        ]
+      },
+      "Technology Skills": {
+        "type": "list",
+        "items": [
+          "Accounting software— ComputerEase construction accounting software; Fund accounting software; Intuit QuickBooks; Sage 50 Accounting",
+          "Spreadsheet software— Microsoft Excel",
+          "Word processing software— Microsoft Word"
+        ]
+      },
+      "Skills": {
+        "type": "list",
+        "items": [
+          "Judgment and Decision Making— Considering the relative costs and benefits of potential actions to choose the most appropriate one.",
+          "Complex Problem Solving— Identifying complex problems and reviewing related information to develop and evaluate options and implement solutions.",
+          "Critical Thinking— Using logic and reasoning to identify the strengths and weaknesses of alternative solutions, conclusions, or approaches to problems.",
+          "Coordination— Adjusting actions in relation to others' actions.",
+          "Management of Financial Resources— Determining how money will be spent to get the work done, and accounting for these expenditures."
+        ]
+      },
+      "Work Activities": {
+        "type": "list",
+        "items": [
+          "Making Decisions and Solving Problems— Analyzing information and evaluating results to choose the best solution and solve problems.",
+          "Establishing and Maintaining Interpersonal Relationships— Developing constructive and cooperative working relationships with others, and maintaining them over time.",
+          "Communicating with Supervisors, Peers, or Subordinates— Providing information to supervisors, co-workers, and subordinates by telephone, in written form, e-mail, or in person."
+        ]
+      },
+      "Detailed Work Activities": {
+        "type": "list",
+        "items": [
+          "Direct financial operations.",
+          "Confer with organizational members to accomplish work activities.",
+          "Prepare operational budgets."
+        ]
+      }
+    }
+  }
+]

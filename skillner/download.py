@@ -5,7 +5,7 @@ import requests
 
 DIR_KB = ".skillner-kb"
 BASE_URL = "https://github.com/AnasAito/SkillNER/raw/main/.skillner-kb/{kb_name}.pkl"
-SUPPORTED_KB = {"ESCO_EN"}
+SUPPORTED_KB = {"ESCO_EN", "ONET_EN"}
 
 
 def download_kb():
