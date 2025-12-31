@@ -2,7 +2,27 @@
 
 ## 🎯 一分钟上手
 
-### 1️⃣ 转换你的 ONET JSON 数据
+### ⚠️ 重要：选择正确的转换脚本
+
+ONET 数据中的技能通常是**完整句子**，如：
+```
+"Judgment and Decision Making— Considering the relative costs..."
+"Direct or coordinate an organization's financial activities..."
+```
+
+**推荐使用** `extract_skills_from_sentences.py` 来提取核心技能词汇！
+
+### 1️⃣ 方法A：从句子中提取技能（推荐）⭐
+
+```bash
+python scripts/extract_skills_from_sentences.py your_onet_data.json .skillner-kb/ONET_EN.pkl
+```
+
+这会从句子中智能提取核心技能关键词，如：
+- 原句："Judgment and Decision Making— Considering..." → 提取："Judgment and Decision Making"
+- 原句："Accounting software— QuickBooks; Sage 50" → 提取："QuickBooks", "Sage 50"
+
+### 1️⃣ 方法B：直接转换（如果技能已经很简短）
 
 ```bash
 python scripts/convert_onet_to_skillner.py your_onet_data.json .skillner-kb/ONET_EN.pkl
