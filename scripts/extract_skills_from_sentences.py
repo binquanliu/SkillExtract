@@ -190,7 +190,8 @@ def extract_skills_from_onet(
         Dictionary in SkillNER format
     """
     if sections_to_process is None:
-        sections_to_process = ['Skills', 'Technology Skills', 'Work Activities',
+        sections_to_process = ['Skills', 'Abilities', 'Knowledge',
+                              'Technology Skills', 'Work Activities',
                               'Detailed Work Activities', 'Tasks']
 
     knowledge_base = {}

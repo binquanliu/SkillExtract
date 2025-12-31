@@ -178,7 +178,8 @@ def convert_onet_to_skillner(
         sections: List of sections to extract (default: Skills, Technology Skills, Work Activities)
     """
     if sections is None:
-        sections = ['Skills', 'Technology Skills', 'Work Activities', 'Detailed Work Activities']
+        sections = ['Skills', 'Abilities', 'Knowledge', 'Technology Skills',
+                   'Work Activities', 'Detailed Work Activities']
 
     print(f"Reading ONET data from {input_path}...")
     with open(input_path, 'r', encoding='utf-8') as f:

@@ -86,8 +86,8 @@ def extract_from_occupation(
         Knowledge base dictionary in SkillNER format
     """
     if sections is None:
-        sections = ['Skills', 'Technology Skills', 'Work Activities',
-                   'Detailed Work Activities']
+        sections = ['Skills', 'Abilities', 'Knowledge', 'Technology Skills',
+                   'Work Activities', 'Detailed Work Activities']
 
     kb = {}
     occ_code = occupation_data.get('code', 'unknown')
