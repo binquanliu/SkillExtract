@@ -45,13 +45,19 @@ class FuzzyQueryMethod:
             query: Query string
 
         Returns:
-            List of matching skill entries
+            List of matching skill entries with similarity scores added
         """
         query = query.lower()
 
         # Exact match first (fastest)
         if query in self.kb:
-            return self.kb[query]
+            # Add similarity score of 1.0 for exact matches
+            exact_entries = []
+            for entry in self.kb[query]:
+                enriched_entry = entry.copy()
+                enriched_entry['similarity_score'] = 1.0
+                exact_entries.append(enriched_entry)
+            return exact_entries
 
         # Fuzzy match
         best_matches = []
@@ -63,9 +69,18 @@ class FuzzyQueryMethod:
         if not best_matches:
             return []
 
-        # Return best match
+        # Return best match with similarity score
         best_matches.sort(key=lambda x: x[1], reverse=True)
-        return self.kb[best_matches[0][0]]
+        best_key, best_sim = best_matches[0]
+
+        matched_entries = self.kb[best_key]
+        enriched_entries = []
+        for entry in matched_entries:
+            enriched_entry = entry.copy()
+            enriched_entry['similarity_score'] = best_sim
+            enriched_entries.append(enriched_entry)
+
+        return enriched_entries
 
 
 class SemanticQueryMethod:
@@ -126,7 +141,7 @@ class SemanticQueryMethod:
             query: Query string
 
         Returns:
-            List of matching skill entries
+            List of matching skill entries with similarity scores added
         """
         # Compute query embedding
         query_embedding = self.model.encode(query, convert_to_tensor=True)
@@ -141,7 +156,15 @@ class SemanticQueryMethod:
         if max_sim < self.threshold:
             return []
 
-        return self.kb[self.skill_keys[max_idx]]
+        # Add similarity score to each entry
+        matched_entries = self.kb[self.skill_keys[max_idx]]
+        enriched_entries = []
+        for entry in matched_entries:
+            enriched_entry = entry.copy()
+            enriched_entry['similarity_score'] = max_sim
+            enriched_entries.append(enriched_entry)
+
+        return enriched_entries
 
 
 def expand_kb_with_variants(kb: Dict, save_path: Optional[str] = None) -> Dict:

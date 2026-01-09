@@ -161,7 +161,8 @@ class JobDescriptionSkillExtractor:
                             'skill': skill_name,
                             'section': candidate.metadata.get('section', 'Unknown'),
                             'matched_text': matched_text,
-                            'concept_id': candidate.metadata.get('concept_id', '')
+                            'concept_id': candidate.metadata.get('concept_id', ''),
+                            'similarity_score': candidate.metadata.get('similarity_score', 0.0)
                         }
 
         # Organize results
