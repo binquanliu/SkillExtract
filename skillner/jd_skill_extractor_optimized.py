@@ -26,6 +26,148 @@ from skillner.text_loaders import StrTextLoader
 from skillner.matchers import SlidingWindowMatcher
 from skillner.conflict_resolvers import SpanProcessor
 
+# Global worker-local extractor (for multiprocessing)
+_worker_extractor = None
+
+
+def _init_worker(init_args):
+    """
+    Initialize worker process with its own extractor instance.
+    Called once per worker process.
+    """
+    global _worker_extractor
+
+    # Create worker-local query method
+    query_method = SemanticQueryMethod(
+        init_args['kb'],
+        model_name=init_args['model_name'],
+        similarity_threshold=init_args['similarity_threshold']
+    )
+
+    # Store in global variable
+    _worker_extractor = {
+        'kb': init_args['kb'],
+        'query_method': query_method,
+        'max_window_size': init_args['max_window_size']
+    }
+
+
+def _process_chunk_worker(jd_chunk: List[str]) -> List[Dict]:
+    """
+    Process a chunk of JDs in worker process.
+    Uses the worker-local extractor initialized by _init_worker.
+    """
+    global _worker_extractor
+
+    results = []
+    for jd in jd_chunk:
+        result = _extract_single_jd(
+            jd,
+            _worker_extractor['kb'],
+            _worker_extractor['query_method'],
+            _worker_extractor['max_window_size']
+        )
+        results.append(result)
+
+    return results
+
+
+def _extract_single_jd(
+    job_description: str,
+    kb: Dict,
+    query_method,
+    max_window_size: int
+) -> Dict:
+    """
+    Extract skills from a single job description.
+    Standalone function for multiprocessing.
+    """
+    if not job_description or pd.isna(job_description):
+        return {
+            'skills': [],
+            'num_skills': 0,
+            'by_section': {},
+            'details': []
+        }
+
+    job_description = str(job_description).strip()
+    if len(job_description) < 10:
+        return {
+            'skills': [],
+            'num_skills': 0,
+            'by_section': {},
+            'details': []
+        }
+
+    # Build extraction pipeline
+    doc = Document()
+    pipeline = Pipeline()
+
+    pipeline.add_node(
+        StrTextLoader(job_description),
+        name='loader'
+    )
+
+    pipeline.add_node(
+        SlidingWindowMatcher(
+            query_method,
+            max_window_size=max_window_size,
+            pre_filter=lambda w: w.lower()
+        ),
+        name='matcher'
+    )
+
+    pipeline.add_node(
+        SpanProcessor(
+            dict_filters={
+                'max_candidate': lambda span: max(span.li_candidates, key=len)
+            }
+        ),
+        name='resolver'
+    )
+
+    # Run extraction
+    pipeline.run(doc)
+
+    # Collect results
+    skills_dict = {}
+
+    for sentence in doc:
+        for span in sentence.li_spans:
+            candidate = span.metadata.get('max_candidate')
+            if candidate:
+                skill_name = candidate.metadata['pref_label']
+
+                if skill_name not in skills_dict:
+                    matched_text = ' '.join(sentence[candidate.window])
+
+                    skills_dict[skill_name] = {
+                        'skill': skill_name,
+                        'section': candidate.metadata.get('section', 'Unknown'),
+                        'matched_text': matched_text,
+                        'concept_id': candidate.metadata.get('concept_id', ''),
+                        'similarity_score': candidate.metadata.get('similarity_score', 0.0)
+                    }
+
+    # Organize results
+    skills_list = list(skills_dict.values())
+
+    by_section = {}
+    for skill_info in skills_list:
+        section = skill_info['section']
+        if section not in by_section:
+            by_section[section] = []
+        by_section[section].append(skill_info['skill'])
+
+    result = {
+        'skills': [s['skill'] for s in skills_list],
+        'num_skills': len(skills_list),
+        'by_section': by_section,
+        'details': skills_list
+    }
+
+    return result
+
 
 class OptimizedJobDescriptionSkillExtractor:
     """
@@ -240,7 +382,8 @@ class OptimizedJobDescriptionSkillExtractor:
 
         Strategy:
         - Split JDs into chunks
-        - Process each chunk in parallel
+        - Each worker initializes its own extractor
+        - Process chunks in parallel
         - Combine results
         """
         from multiprocessing import Pool
@@ -258,31 +401,35 @@ class OptimizedJobDescriptionSkillExtractor:
         print(f"  Split into {len(chunks)} chunks of ~{chunk_size} JDs each")
         print(f"  Processing in parallel...\n")
 
+        # Prepare initialization arguments (pickleable)
+        init_args = {
+            'kb': self.kb,
+            'max_window_size': self.max_window_size,
+            'similarity_threshold': self.query_method.similarity_threshold,
+            'model_name': 'all-MiniLM-L6-v2'
+        }
+
         # Process chunks in parallel
-        with Pool(self.num_workers) as pool:
+        with Pool(
+            self.num_workers,
+            initializer=_init_worker,
+            initargs=(init_args,)
+        ) as pool:
             if show_progress:
                 # Process with progress bar
                 chunk_results = []
                 with tqdm(total=total, desc="Extracting skills") as pbar:
-                    for chunk_result in pool.imap(self._process_chunk, chunks):
+                    for chunk_result in pool.imap(_process_chunk_worker, chunks):
                         chunk_results.append(chunk_result)
                         pbar.update(len(chunk_result))
             else:
-                chunk_results = pool.map(self._process_chunk, chunks)
+                chunk_results = pool.map(_process_chunk_worker, chunks)
 
         # Flatten results
         results = []
         for chunk_result in chunk_results:
             results.extend(chunk_result)
 
-        return results
-
-    def _process_chunk(self, jd_chunk: List[str]) -> List[Dict]:
-        """Process a chunk of JDs (called by multiprocessing)."""
-        results = []
-        for jd in jd_chunk:
-            result = self.extract_skills(jd, return_details=True)
-            results.append(result)
         return results
 
     def _empty_result(self) -> Dict:
