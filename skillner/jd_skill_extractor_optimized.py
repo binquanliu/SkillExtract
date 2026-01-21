@@ -35,15 +35,19 @@ def _init_worker(init_args):
     Initialize worker process with its own extractor instance.
     Called once per worker process.
 
-    Workers use CPU to avoid CUDA re-initialization errors in forked processes.
+    If use_gpu=False (fork mode): Workers use CPU to avoid CUDA fork issues
+    If use_gpu=True (spawn mode): Workers can use GPU
     """
     global _worker_extractor
 
-    # Force CPU usage in worker processes to avoid CUDA fork issues
-    import os
-    os.environ['CUDA_VISIBLE_DEVICES'] = ''
+    use_gpu = init_args.get('use_gpu', False)
 
-    # Create worker-local query method (will use CPU)
+    if not use_gpu:
+        # Force CPU usage in fork mode to avoid CUDA fork issues
+        import os
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
+    # Create worker-local query method
     query_method = SemanticQueryMethod(
         init_args['kb'],
         model_name=init_args['model_name'],
@@ -343,15 +347,33 @@ class OptimizedJobDescriptionSkillExtractor:
         self,
         job_descriptions: List[str],
         show_progress: bool = True,
-        use_multiprocessing: bool = True
+        use_multiprocessing: bool = True,
+        use_gpu: bool = True
     ) -> List[Dict]:
         """
-        Optimized batch extraction with GPU batching and multiprocessing.
+        Optimized batch extraction with multiple strategies.
 
         Args:
             job_descriptions: List of JD texts
             show_progress: Show progress bar
-            use_multiprocessing: Use CPU multiprocessing (recommended for large batches)
+            use_multiprocessing: Use multiprocessing for parallel processing
+            use_gpu: If True with multiprocessing, use 'spawn' to enable GPU in workers
+                    If False with multiprocessing, workers use CPU (faster startup)
+
+        Modes:
+            1. GPU multiprocessing (use_multiprocessing=True, use_gpu=True):
+               - Each worker uses GPU independently
+               - Uses 'spawn' method (slower startup, but GPU enabled)
+               - Best for large batches where GPU speedup > spawn overhead
+
+            2. CPU multiprocessing (use_multiprocessing=True, use_gpu=False):
+               - Workers use CPU only
+               - Uses 'fork' method (fast startup)
+               - Good for medium batches
+
+            3. Serial (use_multiprocessing=False):
+               - Single process, uses GPU if available
+               - Good for small batches
 
         Returns:
             List of extraction results
@@ -360,13 +382,20 @@ class OptimizedJobDescriptionSkillExtractor:
             return []
 
         print(f"Processing {len(job_descriptions):,} job descriptions...")
-        print(f"  GPU batch size: {self.batch_size}")
-        print(f"  Multiprocessing: {use_multiprocessing} ({self.num_workers} workers)")
-        print()
 
         if use_multiprocessing and len(job_descriptions) > 100:
-            return self._extract_parallel(job_descriptions, show_progress)
+            if use_gpu and torch.cuda.is_available():
+                print(f"  Mode: GPU multiprocessing (spawn)")
+                print(f"  Workers: {self.num_workers} (each can use GPU)")
+            else:
+                print(f"  Mode: CPU multiprocessing (fork)")
+                print(f"  Workers: {self.num_workers} (CPU only)")
+            print()
+            return self._extract_parallel(job_descriptions, show_progress, use_spawn=use_gpu)
         else:
+            gpu_status = "GPU" if torch.cuda.is_available() else "CPU"
+            print(f"  Mode: Serial ({gpu_status})")
+            print()
             return self._extract_serial(job_descriptions, show_progress)
 
     def _extract_serial(
@@ -388,7 +417,8 @@ class OptimizedJobDescriptionSkillExtractor:
     def _extract_parallel(
         self,
         job_descriptions: List[str],
-        show_progress: bool
+        show_progress: bool,
+        use_spawn: bool = False
     ) -> List[Dict]:
         """
         Parallel processing with multiprocessing.
@@ -398,9 +428,21 @@ class OptimizedJobDescriptionSkillExtractor:
         - Each worker initializes its own extractor
         - Process chunks in parallel
         - Combine results
+
+        Args:
+            use_spawn: If True, use 'spawn' instead of 'fork' to enable GPU in workers
+                      Slower startup but workers can use CUDA
         """
-        from multiprocessing import Pool
+        import multiprocessing as mp
         import math
+
+        # Use spawn method if requested (allows CUDA in workers)
+        if use_spawn:
+            ctx = mp.get_context('spawn')
+            print(f"  Using 'spawn' method - each worker can use GPU")
+        else:
+            ctx = mp.get_context('fork')
+            print(f"  Using 'fork' method - workers use CPU")
 
         # Calculate chunk size
         total = len(job_descriptions)
@@ -419,11 +461,12 @@ class OptimizedJobDescriptionSkillExtractor:
             'kb': self.kb,
             'max_window_size': self.max_window_size,
             'similarity_threshold': self.query_method.threshold,
-            'model_name': 'all-MiniLM-L6-v2'
+            'model_name': 'all-MiniLM-L6-v2',
+            'use_gpu': use_spawn  # Only use GPU if spawn mode
         }
 
         # Process chunks in parallel
-        with Pool(
+        with ctx.Pool(
             self.num_workers,
             initializer=_init_worker,
             initargs=(init_args,)
