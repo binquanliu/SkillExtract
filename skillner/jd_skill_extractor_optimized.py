@@ -405,7 +405,7 @@ class OptimizedJobDescriptionSkillExtractor:
         init_args = {
             'kb': self.kb,
             'max_window_size': self.max_window_size,
-            'similarity_threshold': self.query_method.similarity_threshold,
+            'similarity_threshold': self.query_method.threshold,
             'model_name': 'all-MiniLM-L6-v2'
         }
 
