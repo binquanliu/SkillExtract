@@ -303,9 +303,56 @@ class UltraOptimizedSkillExtractor:
 
         return results
 
-    def extract_skills(self, job_description: str) -> Dict:
-        """Single JD extraction (wrapper for compatibility)."""
-        return self.extract_skills_batch_ultra([job_description], show_progress=False)[0]
+    def extract_skills(
+        self,
+        job_description,
+        show_progress: bool = False,
+        return_details: bool = True
+    ):
+        """
+        Extract skills from single JD or list of JDs.
+
+        This method provides backward compatibility with the old API.
+        Automatically detects if input is single string or list.
+
+        Args:
+            job_description: Single JD string or list of JD strings
+            show_progress: Show progress bar (for batch processing)
+            return_details: Keep for compatibility (always returns details)
+
+        Returns:
+            Dict (single JD) or List[Dict] (multiple JDs)
+        """
+        # Check if input is a list or single string
+        if isinstance(job_description, list):
+            # Batch processing
+            return self.extract_skills_batch_ultra(
+                job_description,
+                show_progress=show_progress
+            )
+        else:
+            # Single JD processing
+            return self.extract_skills_batch_ultra(
+                [job_description],
+                show_progress=False
+            )[0]
+
+    def extract_skills_batch(
+        self,
+        job_descriptions: List[str],
+        show_progress: bool = True
+    ) -> List[Dict]:
+        """
+        Alias for extract_skills_batch_ultra for backward compatibility.
+
+        Args:
+            job_descriptions: List of JD texts
+            show_progress: Show progress bar
+
+        Returns:
+            List of extraction results
+        """
+        return self.extract_skills_batch_ultra(job_descriptions, show_progress)
 
     def _empty_result(self) -> Dict:
         return {
