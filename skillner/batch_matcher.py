@@ -18,12 +18,13 @@ Optimized approach (fast):
 """
 
 from typing import Callable, List, Tuple
+from skillner.core.base import Node
 from skillner.core.data_structures import Document, Sentence, Span, Candidate, Word
 
 CONCEPT_ID: str = "concept_id"
 
 
-class BatchSlidingWindowMatcher:
+class BatchSlidingWindowMatcher(Node):
     """
     Batch-optimized sliding window matcher.
 
