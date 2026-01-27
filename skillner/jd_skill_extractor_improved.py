@@ -80,6 +80,8 @@ class ImprovedBatchSkillExtractor:
         if use_fp16 and torch.cuda.is_available():
             try:
                 self.query_method.model.half()
+                # CRITICAL: Convert skill_embeddings to FP16 too
+                self.query_method.skill_embeddings = self.query_method.skill_embeddings.half()
                 print("✓ Applied FP16 mixed precision")
             except Exception as e:
                 print(f"⚠ Could not apply FP16: {e}")
