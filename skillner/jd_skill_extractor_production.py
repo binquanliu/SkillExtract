@@ -41,7 +41,7 @@ def _extract_windows_worker(args: Tuple[List[str], int, int]) -> Tuple[List[Tupl
     Worker function for parallel sliding window extraction.
 
     MUST be at module level (not a class method) for pickle compatibility.
-    This function is pure Python string operations - NO PyTorch/CUDA.
+    This function is pure Python string operations - NO PyTorch/CUDA/Pandas.
 
     Args:
         args: Tuple of (jd_batch, max_window_size, start_idx)
@@ -54,6 +54,8 @@ def _extract_windows_worker(args: Tuple[List[str], int, int]) -> Tuple[List[Tupl
             - List of (jd_idx, query) pairs
             - Set of unique queries in this batch (for local dedup)
     """
+    import math  # Only import stdlib - no pandas/numpy/torch!
+
     jd_batch, max_window_size, start_idx = args
 
     results = []  # (global_jd_idx, query)
@@ -62,8 +64,10 @@ def _extract_windows_worker(args: Tuple[List[str], int, int]) -> Tuple[List[Tupl
     for local_idx, jd in enumerate(jd_batch):
         global_jd_idx = start_idx + local_idx
 
-        # Skip invalid JDs
-        if not jd or (isinstance(jd, float) and pd.isna(jd)):
+        # Skip invalid JDs - pure Python check, no pandas!
+        if jd is None:
+            continue
+        if isinstance(jd, float) and math.isnan(jd):
             continue
 
         jd_str = str(jd).strip()
@@ -318,9 +322,9 @@ class ProductionOptimizedSkillExtractor:
 
         Key design decisions:
         1. Worker function is at module level (pickle-safe)
-        2. Workers only do pure Python string operations (no PyTorch/CUDA)
+        2. Workers only do pure Python string operations (no PyTorch/CUDA/Pandas)
         3. Each worker does local deduplication to reduce IPC data
-        4. Uses 'spawn' context for CUDA compatibility
+        4. Uses 'fork' on Linux (faster), 'spawn' on Windows/macOS
 
         Args:
             job_descriptions: List of JD strings
@@ -330,7 +334,8 @@ class ProductionOptimizedSkillExtractor:
             Tuple of (all_query_pairs, global_unique_queries)
         """
         num_jds = len(job_descriptions)
-        num_workers = _get_optimal_workers(num_jds)
+        # FIX: Use self.num_workers instead of recalculating!
+        num_workers = self.num_workers if self.num_workers else _get_optimal_workers(num_jds)
 
         if show_progress:
             print(f"    [CPU Parallel] Using {num_workers} workers for {num_jds:,} JDs")
@@ -344,13 +349,16 @@ class ProductionOptimizedSkillExtractor:
             # Args: (jd_batch, max_window_size, start_idx)
             batches.append((batch_jds, self.max_window_size, i))
 
-        # Use 'spawn' context to avoid CUDA fork issues
-        # This is safer but slightly slower than 'fork'
-        try:
-            ctx = mp.get_context('spawn')
-        except Exception:
-            # Fallback for older Python versions
+        # Choose multiprocessing context based on platform
+        # - Linux: 'fork' is faster and safe here (worker has no CUDA/PyTorch)
+        # - Windows/macOS: must use 'spawn'
+        import sys
+        if sys.platform == 'linux':
+            # fork is faster and our worker is pure Python (no CUDA)
             ctx = mp.get_context('fork')
+        else:
+            # Windows/macOS require spawn
+            ctx = mp.get_context('spawn')
 
         all_query_pairs = []
         global_unique_queries = set()
