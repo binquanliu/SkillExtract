@@ -264,34 +264,66 @@ class ProductionOptimizedSkillExtractor:
         Search for skills using batch GPU processing.
 
         Key optimization: Batch encode + batch cosine similarity on GPU.
+
+        IMPORTANT: Similarity computation is also batched to avoid OOM
+        when processing millions of queries.
         """
         if not queries:
             return []
 
-        # Encode queries (batch)
-        query_embeddings = self.model.encode(
-            queries,
-            batch_size=self.batch_size,
-            show_progress_bar=False,
-            convert_to_tensor=True,
-            device=self.device
-        )
+        num_queries = len(queries)
 
-        # Normalize
-        query_embeddings = torch.nn.functional.normalize(query_embeddings, p=2, dim=1)
+        # For very large query sets, process in sub-batches to avoid OOM
+        # Similarity matrix size: num_queries × num_skills × 2 bytes (FP16)
+        # With 3000 skills, 100K queries = 600MB, 1M queries = 6GB
+        # Use sub_batch_size to limit memory usage
+        sub_batch_size = min(self.batch_size, 100000)  # Max 100K queries per similarity computation
 
-        # Compute cosine similarity (batch, GPU)
-        # Shape: (num_queries, num_skills)
-        similarities = torch.matmul(query_embeddings, self.skill_embeddings.T)
+        all_max_scores = []
+        all_max_indices = []
 
-        # Find best match for each query
-        max_scores, max_indices = similarities.max(dim=1)
+        # Process in sub-batches
+        for start_idx in range(0, num_queries, sub_batch_size):
+            end_idx = min(start_idx + sub_batch_size, num_queries)
+            batch_queries = queries[start_idx:end_idx]
+
+            # Encode queries (this batch)
+            query_embeddings = self.model.encode(
+                batch_queries,
+                batch_size=self.batch_size,
+                show_progress_bar=False,
+                convert_to_tensor=True,
+                device=self.device
+            )
+
+            # Normalize
+            query_embeddings = torch.nn.functional.normalize(query_embeddings, p=2, dim=1)
+
+            # Compute cosine similarity (batch, GPU)
+            # Shape: (sub_batch_size, num_skills) - much smaller than before!
+            similarities = torch.matmul(query_embeddings, self.skill_embeddings.T)
+
+            # Find best match for each query in this batch
+            max_scores, max_indices = similarities.max(dim=1)
+
+            # Move to CPU and collect
+            all_max_scores.append(max_scores.cpu())
+            all_max_indices.append(max_indices.cpu())
+
+            # Free GPU memory immediately
+            del query_embeddings, similarities, max_scores, max_indices
+            if start_idx > 0 and start_idx % 500000 == 0:
+                torch.cuda.empty_cache()
+
+        # Concatenate all results
+        all_max_scores = torch.cat(all_max_scores)
+        all_max_indices = torch.cat(all_max_indices)
 
         # Process results
         results = []
-        for i in range(len(queries)):
-            best_score = max_scores[i].item()
-            best_idx = max_indices[i].item()
+        for i in range(num_queries):
+            best_score = all_max_scores[i].item()
+            best_idx = all_max_indices[i].item()
 
             if best_score >= self.similarity_threshold:
                 skill_key = self.skill_keys[best_idx]
