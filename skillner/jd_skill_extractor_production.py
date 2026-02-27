@@ -366,8 +366,8 @@ class ProductionOptimizedSkillExtractor:
             Tuple of (all_query_pairs, global_unique_queries)
         """
         num_jds = len(job_descriptions)
-        # FIX: Use self.num_workers instead of recalculating!
-        num_workers = self.num_workers if self.num_workers else _get_optimal_workers(num_jds)
+        # Always use self.num_workers (set in __init__, either user-specified or auto-detected)
+        num_workers = self.num_workers
 
         if show_progress:
             print(f"    [CPU Parallel] Using {num_workers} workers for {num_jds:,} JDs")
