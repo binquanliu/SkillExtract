@@ -1,0 +1,199 @@
+{
+  "title": "AI Impact Dimensions on Talent Demands",
+  "description": "Framework for examining how AI implementation changes organizational talent demands across 3,003 KSAOs",
+  "dimensions": {
+    "1": {
+      "name": "Replaced by AI",
+      "full_name": "Skills REPLACED by AI (Automation)",
+      "description": "Routine cognitive tasks, data entry, basic analysis, and rule-based operations are most vulnerable to full AI automation.",
+      "categories": [1, 10, 11],
+      "hypothesis": "Occupations with high concentration of these KSAOs will see declining demand for these specific skills."
+    },
+    "2": {
+      "name": "Augmented by AI",
+      "full_name": "Skills AUGMENTED by AI (Human-AI Collaboration)",
+      "description": "AI enhances but does not replace human expertise. Workers become more productive with AI assistance.",
+      "categories": [3, 7, 13, 14],
+      "hypothesis": "Increasing demand for humans who can effectively leverage AI tools while providing uniquely human judgment."
+    },
+    "3": {
+      "name": "Building & Managing AI",
+      "full_name": "Skills for BUILDING & MANAGING AI (AI Technology Skills)",
+      "description": "Direct AI tool creation and management. Rapidly growing demand.",
+      "categories": [9, 15, 8],
+      "hypothesis": "These categories show the strongest demand growth as organizations build AI capabilities."
+    },
+    "4": {
+      "name": "Resistant to AI",
+      "full_name": "Skills RESISTANT to AI (Uniquely Human)",
+      "description": "Human-centric capabilities that AI cannot replicate.",
+      "categories": [2, 4, 5, 6],
+      "hypothesis": "Stable or increasing demand as these become more differentiating in an AI-augmented workplace."
+    },
+    "5": {
+      "name": "Transformed by AI",
+      "full_name": "Skills TRANSFORMED by AI (Workflow Restructuring)",
+      "description": "The fundamental human task remains but workflows are restructured around AI capabilities.",
+      "categories": [12, 16, 17, 18],
+      "hypothesis": "Workers must adapt HOW they use these skills, even as core competency remains relevant."
+    }
+  },
+  "categories": {
+    "1": {
+      "name": "Cognitive Abilities",
+      "ksao_type": "Ability",
+      "count": 21,
+      "ai_impact_dimension": 1,
+      "ai_impact_description": "Core target for AI augmentation/replacement. Routine cognitive tasks (pattern matching, calculation, comprehension) are increasingly performed by AI.",
+      "sample_items": ["category flexibility", "deductive reasoning", "flexibility of closure", "fluency of ideas"]
+    },
+    "2": {
+      "name": "Interpersonal & Social Skills",
+      "ksao_type": "Skill",
+      "count": 8,
+      "ai_impact_dimension": 4,
+      "ai_impact_description": "Most resistant to AI replacement. Emotional intelligence, persuasion, negotiation, and social perceptiveness are distinctly human.",
+      "sample_items": ["active listening", "coordination", "instructing", "negotiation"]
+    },
+    "3": {
+      "name": "Higher-Order Thinking & Problem Solving",
+      "ksao_type": "Skill",
+      "count": 13,
+      "ai_impact_dimension": 2,
+      "ai_impact_description": "Partially augmented by AI. AI assists with information synthesis and analysis, but human judgment, critical evaluation of AI outputs, and creative problem-solving remain essential.",
+      "sample_items": ["active learning", "complex problem solving", "critical thinking", "judgment and decision making"]
+    },
+    "4": {
+      "name": "Management & Leadership",
+      "ksao_type": "Skill/Knowledge",
+      "count": 8,
+      "ai_impact_dimension": 4,
+      "ai_impact_description": "Transformed, not replaced. Leaders must now manage AI-augmented teams, allocate AI resources, interpret AI-driven insights for strategy.",
+      "sample_items": ["management of financial resources", "management of material resources", "management of personnel resources", "operations analysis"]
+    },
+    "5": {
+      "name": "Physical & Psychomotor Abilities",
+      "ksao_type": "Ability",
+      "count": 17,
+      "ai_impact_dimension": 4,
+      "ai_impact_description": "Not directly affected by AI software, but relevant to robotics/physical automation research.",
+      "sample_items": ["arm-hand steadiness", "control precision", "dynamic flexibility", "explosive strength"]
+    },
+    "6": {
+      "name": "Sensory & Perceptual Abilities",
+      "ksao_type": "Ability",
+      "count": 11,
+      "ai_impact_dimension": 4,
+      "ai_impact_description": "Minimal direct AI impact. Computer vision and speech recognition create AI analogues, but human sensory abilities remain distinct.",
+      "sample_items": ["auditory attention", "depth perception", "far vision", "glare sensitivity"]
+    },
+    "7": {
+      "name": "Domain-Specific Knowledge",
+      "ksao_type": "Knowledge",
+      "count": 27,
+      "ai_impact_dimension": 2,
+      "ai_impact_description": "AI changes how domain knowledge is accessed and applied. Experts shift from memorization to curation, validation, and application of AI-retrieved information.",
+      "sample_items": ["biology", "chemistry", "economics and accounting", "engineering and technology"]
+    },
+    "8": {
+      "name": "Technical Equipment & Maintenance Skills",
+      "ksao_type": "Skill",
+      "count": 10,
+      "ai_impact_dimension": 3,
+      "ai_impact_description": "Partially automatable via IoT, predictive maintenance AI, and smart diagnostics. Technicians increasingly work alongside AI systems.",
+      "sample_items": ["equipment maintenance", "equipment selection", "installation", "operation and control"]
+    },
+    "9": {
+      "name": "AI, Machine Learning & Advanced Analytics",
+      "ksao_type": "Technology Tool",
+      "count": 8,
+      "ai_impact_dimension": 3,
+      "ai_impact_description": "Directly represents AI capabilities - these are the tools CREATING disruption. Demand for AI/ML skills is exploding.",
+      "sample_items": ["machine learning software", "natural language processing", "neural network software", "predictive analytics"]
+    },
+    "10": {
+      "name": "Data Management, Analytics & Business Intelligence",
+      "ksao_type": "Technology Tool",
+      "count": 194,
+      "ai_impact_dimension": 1,
+      "ai_impact_description": "Heavily augmented by AI (natural language querying, auto-generated reports, anomaly detection). Traditional BI skills face disruption.",
+      "sample_items": ["database management", "data mining", "business intelligence software", "SQL"]
+    },
+    "11": {
+      "name": "Enterprise & Business Operations Software",
+      "ksao_type": "Technology Tool",
+      "count": 403,
+      "ai_impact_dimension": 1,
+      "ai_impact_description": "AI being embedded into ERP/CRM/accounting/logistics systems. Workers shift from data entry to exception handling and AI oversight.",
+      "sample_items": ["enterprise resource planning", "customer relationship management", "accounting software", "supply chain management"]
+    },
+    "12": {
+      "name": "Communication, Collaboration & Productivity Tools",
+      "ksao_type": "Technology Tool",
+      "count": 190,
+      "ai_impact_dimension": 5,
+      "ai_impact_description": "AI augments communication (smart compose, auto-summarization, real-time translation). Core communication skills remain human.",
+      "sample_items": ["email software", "video conferencing", "project management software", "word processing"]
+    },
+    "13": {
+      "name": "Design, Creative & Multimedia Tools",
+      "ksao_type": "Technology Tool",
+      "count": 66,
+      "ai_impact_dimension": 2,
+      "ai_impact_description": "Generative AI (image, video, text, code) is rapidly transforming creative workflows. Human creativity directs AI capabilities.",
+      "sample_items": ["graphics software", "video editing", "audio software", "web design"]
+    },
+    "14": {
+      "name": "Engineering, CAD/CAM & Scientific Software",
+      "ksao_type": "Technology Tool",
+      "count": 218,
+      "ai_impact_dimension": 2,
+      "ai_impact_description": "AI enhances generative design, automated simulation, predictive testing. Engineers leverage AI for optimization.",
+      "sample_items": ["computer aided design", "computer aided manufacturing", "simulation software", "finite element analysis"]
+    },
+    "15": {
+      "name": "IT Infrastructure, Networking & Cybersecurity",
+      "ksao_type": "Technology Tool",
+      "count": 325,
+      "ai_impact_dimension": 3,
+      "ai_impact_description": "AI transforms security (threat detection, anomaly detection) and IT operations (AIOps, predictive infrastructure management).",
+      "sample_items": ["network security", "cloud computing", "system administration", "cybersecurity tools"]
+    },
+    "16": {
+      "name": "Healthcare & Life Sciences Technology",
+      "ksao_type": "Technology Tool",
+      "count": 39,
+      "ai_impact_dimension": 5,
+      "ai_impact_description": "AI transforming diagnostics, clinical decision support, drug discovery, and administrative workflows in healthcare.",
+      "sample_items": ["electronic health records", "medical imaging software", "laboratory information systems", "clinical decision support"]
+    },
+    "17": {
+      "name": "HR, Workforce Management & Training Technology",
+      "ksao_type": "Technology Tool",
+      "count": 27,
+      "ai_impact_dimension": 5,
+      "ai_impact_description": "AI automates resume screening, skills matching, performance analytics, and learning personalization.",
+      "sample_items": ["human resources software", "applicant tracking systems", "learning management systems", "workforce analytics"]
+    },
+    "18": {
+      "name": "General-Purpose & Industry-Specific Software",
+      "ksao_type": "Technology Tool",
+      "count": 1418,
+      "ai_impact_dimension": 5,
+      "ai_impact_description": "Vendor-specific software products spanning diverse industries. AI being integrated across all categories.",
+      "sample_items": ["industry-specific applications", "specialized software", "vertical market solutions"]
+    }
+  },
+  "category_to_dimension": {
+    "1": 1, "2": 4, "3": 2, "4": 4, "5": 4, "6": 4,
+    "7": 2, "8": 3, "9": 3, "10": 1, "11": 1, "12": 5,
+    "13": 2, "14": 2, "15": 3, "16": 5, "17": 5, "18": 5
+  },
+  "dimension_labels": {
+    "1": "Replaced by AI",
+    "2": "Augmented by AI",
+    "3": "Building & Managing AI",
+    "4": "Resistant to AI",
+    "5": "Transformed by AI"
+  }
+}
