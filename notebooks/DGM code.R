@@ -10,19 +10,23 @@ library(readxl)
 
 # Set path to your folder
 # folder <- "/Users/hanyimin/Dropbox/Haylee/UIUC/research/AI adoption & KSAOs requirement/data/rcid_quarterly_csv"
-folder <- "/Users/hanyimin/Downloads/rcid_quarterly_buckets"
+# folder <- "/Users/hanyimin/Downloads/rcid_quarterly_buckets"
+folder <- "/Users/hanyimin/Downloads/rcid_quarterly_categories"
 
 
 
-# Read and combine all CSVs
-combined <- list.files(folder, pattern = "*.csv", full.names = TRUE) |>
+# Read and combine all CSVs (exclude helper files whose names start with "_")
+all_files  <- list.files(folder, pattern = "\\.csv$", full.names = TRUE)
+data_files <- all_files[!str_detect(basename(all_files), "^_")]
+
+combined <- data_files |>
   lapply(read_csv, show_col_types = FALSE) |>
   bind_rows()
 
 # Save
 write_csv(combined, file.path(folder, "combined_dataset.csv"))
 
-cat("Combined", length(list.files(folder, pattern = "*.csv")), "files →", nrow(combined), "rows\n")
+cat("Combined", length(data_files), "files →", nrow(combined), "rows\n")
 
 
 
@@ -30,9 +34,11 @@ cat("Combined", length(list.files(folder, pattern = "*.csv")), "files →", nrow
 
 
 # ── 1. Build rcid → company_name table from your CSV filenames ────────────────
-csv_folder <- "/Users/hanyimin/Dropbox/Haylee/UIUC/research/AI adoption & KSAOs requirement/data/rcid_quarterly_csv"
+# Use the same folder as the data — each per-RCID file is named "{rcid}_{name}.csv"
+csv_folder <- folder
 
 filenames <- list.files(csv_folder, pattern = "\\.csv$")
+filenames <- filenames[!str_detect(filenames, "^_")]  # skip helper files like _category_columns.csv
 
 crosswalk_panel <- tibble(filename = filenames) |>
   mutate(
@@ -309,18 +315,31 @@ library(tidyr)
 library(tibble)
 
 # ── Define outcomes and classifications ───────────────────────────────────────
-# outcomes       <- c("ai_replaced_by_ai", "ai_augmented_by_ai", 
-#                     "ai_building_managing_ai", "ai_resistant_to_ai", 
+# outcomes       <- c("ai_replaced_by_ai", "ai_augmented_by_ai",
+#                     "ai_building_managing_ai", "ai_resistant_to_ai",
 #                     "ai_transformed_by_ai")
 
-outcomes <- c("bucket_communication_and_creative"
-              , "bucket_data_and_analytics"            
-             , "bucket_development_and_infrastructure"
-             , "bucket_domain-specific_and_industry"  
-             , "bucket_enterprise_and_operations"     
-             , "bucket_security_and_compliance"  )
+# 6-bucket outcomes (used when folder points at rcid_quarterly_buckets):
+# outcomes <- c("bucket_communication_and_creative",
+#               "bucket_data_and_analytics",
+#               "bucket_development_and_infrastructure",
+#               "bucket_domain-specific_and_industry",
+#               "bucket_enterprise_and_operations",
+#               "bucket_security_and_compliance")
+
+# 133-category outcomes: read the column-name helper written by the notebook
+outcomes <- read_csv(file.path(folder, "_category_columns.csv"),
+                     show_col_types = FALSE)$outcome_column
+
+# Keep only outcomes that actually appear as columns in `panel`
+outcomes <- intersect(outcomes, names(panel))
 
 classifications <- c("aug", "auto", "both")
+
+cat("Running DGM on", length(outcomes), "outcomes x",
+    length(classifications), "classifications =",
+    length(outcomes) * length(classifications),
+    "outcome-class combinations\n")
 
 # ── Storage for results ───────────────────────────────────────────────────────
 results_list <- list()
@@ -472,9 +491,9 @@ coef_summary <- lapply(results_list, function(r) {
   bind_rows() |>
   select(outcome, classification, icc, term, Value, Std.Error, `t-value`, `p-value`)
 
-write_csv(coef_summary, "/Users/hanyimin/Dropbox/Haylee/UIUC/research/AI adoption & KSAOs requirement/data/discontinuous_growth_results1.csv")
-cat("\nDone! Results saved to discontinuous_growth_results.csv\n")
-cat("Total models:", length(results_list), "/ 15\n")
+write_csv(coef_summary, "/Users/hanyimin/Dropbox/Haylee/UIUC/research/AI adoption & KSAOs requirement/data/discontinuous_growth_results_categories.csv")
+cat("\nDone! Results saved to discontinuous_growth_results_categories.csv\n")
+cat("Total models:", length(results_list), "/", length(outcomes) * length(classifications), "\n")
 
 
 
