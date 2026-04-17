@@ -315,21 +315,34 @@ library(tidyr)
 library(tibble)
 
 # ── Define outcomes and classifications ───────────────────────────────────────
-# outcomes       <- c("ai_replaced_by_ai", "ai_augmented_by_ai",
-#                     "ai_building_managing_ai", "ai_resistant_to_ai",
-#                     "ai_transformed_by_ai")
+# The notebook writes a column-name helper into each output folder:
+#   rcid_monthly_categories/_category_columns.csv   (133 × 4 = 532 outcomes)
+#   rcid_monthly_buckets/_bucket_columns.csv        (6   × 4 = 24  outcomes)
+# Auto-detect which helper file is present so this script works for either
+# folder without edits.
 
-# 6-bucket outcomes (used when folder points at rcid_quarterly_buckets):
-# outcomes <- c("bucket_communication_and_creative",
-#               "bucket_data_and_analytics",
-#               "bucket_development_and_infrastructure",
-#               "bucket_domain-specific_and_industry",
-#               "bucket_enterprise_and_operations",
-#               "bucket_security_and_compliance")
+col_helper <- list.files(
+  folder,
+  pattern = "^_(category|bucket)_columns\\.csv$",
+  full.names = TRUE
+)
+if (length(col_helper) == 0) {
+  stop("No column helper CSV (_category_columns.csv or _bucket_columns.csv) ",
+       "found in ", folder)
+}
+outcomes <- read_csv(col_helper[1], show_col_types = FALSE)$outcome_column
+cat("Loaded", length(outcomes), "candidate outcomes from",
+    basename(col_helper[1]), "\n")
 
-# 133-category outcomes: read the column-name helper written by the notebook
-outcomes <- read_csv(file.path(folder, "_category_columns.csv"),
-                     show_col_types = FALSE)$outcome_column
+# Optional: restrict to a single metric (out of the 4 available) to keep the
+# run tractable. Valid suffixes: "pct_posts", "n_posts", "total_mentions",
+# "avg_mentions_per_post". Set to NULL to run all 4.
+metric_suffix <- "pct_posts"   # change or set to NULL
+if (!is.null(metric_suffix)) {
+  outcomes <- outcomes[str_detect(outcomes, paste0("_", metric_suffix, "$"))]
+  cat("Filtered to metric '", metric_suffix, "' →", length(outcomes),
+      "outcomes\n", sep = "")
+}
 
 # Keep only outcomes that actually appear as columns in `panel`
 outcomes <- intersect(outcomes, names(panel))
@@ -483,17 +496,29 @@ for (outcome in outcomes) {
 }
 
 # ── Export all Step1a coefficient tables to one CSV ──────────────────────────
-coef_summary <- lapply(results_list, function(r) {
-  as.data.frame(r$step1a) |>
-    tibble::rownames_to_column("term") |>
-    mutate(outcome = r$outcome, classification = r$classification, icc = r$icc)
-}) |>
-  bind_rows() |>
-  select(outcome, classification, icc, term, Value, Std.Error, `t-value`, `p-value`)
+if (length(results_list) == 0) {
+  cat("\nNo models fit — nothing to export.\n")
+  cat("Check that `outcomes` intersected with `names(panel)` is non-empty.\n")
+} else {
+  coef_summary <- lapply(results_list, function(r) {
+    as.data.frame(r$step1a) |>
+      tibble::rownames_to_column("term") |>
+      mutate(outcome = r$outcome, classification = r$classification, icc = r$icc)
+  }) |>
+    bind_rows() |>
+    select(outcome, classification, icc, term, Value, Std.Error, `t-value`, `p-value`)
 
-write_csv(coef_summary, "/Users/hanyimin/Dropbox/Haylee/UIUC/research/AI adoption & KSAOs requirement/data/discontinuous_growth_results_monthly_categories.csv")
-cat("\nDone! Results saved to discontinuous_growth_results_monthly_categories.csv\n")
-cat("Total models:", length(results_list), "/", length(outcomes) * length(classifications), "\n")
+  # Output filename reflects bucket vs category based on which helper was used
+  out_tag <- if (str_detect(basename(col_helper[1]), "bucket")) "buckets" else "categories"
+  if (!is.null(metric_suffix)) out_tag <- paste0(out_tag, "_", metric_suffix)
+  out_path <- paste0(
+    "/Users/hanyimin/Dropbox/Haylee/UIUC/research/AI adoption & KSAOs requirement/data/",
+    "discontinuous_growth_results_monthly_", out_tag, ".csv"
+  )
+  write_csv(coef_summary, out_path)
+  cat("\nDone! Results saved to", out_path, "\n")
+  cat("Total models:", length(results_list), "/", length(outcomes) * length(classifications), "\n")
+}
 
 
 
