@@ -11,7 +11,7 @@ library(readxl)
 # Set path to your folder
 # folder <- "/Users/hanyimin/Dropbox/Haylee/UIUC/research/AI adoption & KSAOs requirement/data/rcid_quarterly_csv"
 # folder <- "/Users/hanyimin/Downloads/rcid_quarterly_buckets"
-folder <- "/Users/hanyimin/Downloads/rcid_quarterly_categories"
+folder <- "/Users/hanyimin/Downloads/rcid_monthly_categories"
 
 
 
@@ -183,53 +183,53 @@ write_csv(crosswalk_final, "crosswalk_final.csv")
 ########
 
 # ── Helper: parse the FIRST date from a messy time string ─────────────────────
-# Returns a tibble with (year, quarter) using the earliest date found
+# Returns a tibble with (year, month, trans_month) using the earliest date found
 
 parse_first_date <- function(x) {
   x <- as.character(x)
-  
+
   # --- Guard against NA ------------------------------------------------------
   if (is.na(x) | x == "NA") {
-    return(tibble(year = NA_integer_, quarter = NA_integer_, trans_quarter = NA_character_))
+    return(tibble(year = NA_integer_, month = NA_integer_, trans_month = NA_character_))
   }
-  
+
   # --- Try MM/YYYY pattern first (e.g., "03/2024", "01/2023. 10/2024") --------
   mm_yyyy <- str_extract(x, "\\b(0?[1-9]|1[0-2])/(\\d{4})\\b")
   if (!is.na(mm_yyyy)) {
     parts   <- str_split(mm_yyyy, "/")[[1]]
-    month   <- as.integer(parts[1])
+    mo      <- as.integer(parts[1])
     year    <- as.integer(parts[2])
-    quarter <- ceiling(month / 3)
-    return(tibble(year = year, quarter = quarter, trans_quarter = paste0(year, "Q", quarter)))
+    return(tibble(year = year, month = mo, trans_month = sprintf("%04d-%02d", year, mo)))
   }
-  
-  # --- "Q2 2025" style --------------------------------------------------------
+
+  # --- "Q2 2025" style → first month of the quarter --------------------------
   q_style <- str_match(x, "Q([1-4])\\s*(\\d{4})")
   if (!is.na(q_style[1])) {
-    return(tibble(year    = as.integer(q_style[3]),
-                  quarter = as.integer(q_style[2]),
-                  trans_quarter = paste0(q_style[3], "Q", q_style[2])))
+    qtr  <- as.integer(q_style[2])
+    year <- as.integer(q_style[3])
+    mo   <- (qtr - 1L) * 3L + 1L
+    return(tibble(year = year, month = mo, trans_month = sprintf("%04d-%02d", year, mo)))
   }
-  
-  # --- Season words → quarter -------------------------------------------------
+
+  # --- Season words → month --------------------------------------------------
   if (str_detect(str_to_lower(x), "summer")) {
     yr <- str_extract(x, "\\d{4}")
-    if (!is.na(yr)) return(tibble(year = as.integer(yr), quarter = 3L,
-                                  trans_quarter = paste0(yr, "Q3")))
+    if (!is.na(yr)) return(tibble(year = as.integer(yr), month = 7L,
+                                  trans_month = sprintf("%04d-07", as.integer(yr))))
   }
   if (str_detect(str_to_lower(x), "early")) {
     yr <- str_extract(x, "\\d{4}")
-    if (!is.na(yr)) return(tibble(year = as.integer(yr), quarter = 1L,
-                                  trans_quarter = paste0(yr, "Q1")))
+    if (!is.na(yr)) return(tibble(year = as.integer(yr), month = 1L,
+                                  trans_month = sprintf("%04d-01", as.integer(yr))))
   }
-  
-  # --- Year only (e.g., "2021", "2021-2023") → Q1 of first year --------------
+
+  # --- Year only (e.g., "2021", "2021-2023") → January of first year ---------
   yr <- str_extract(x, "\\d{4}")
-  if (!is.na(yr)) return(tibble(year = as.integer(yr), quarter = 1L,
-                                trans_quarter = paste0(yr, "Q1")))
-  
+  if (!is.na(yr)) return(tibble(year = as.integer(yr), month = 1L,
+                                trans_month = sprintf("%04d-01", as.integer(yr))))
+
   # --- No date found ----------------------------------------------------------
-  tibble(year = NA_integer_, quarter = NA_integer_, trans_quarter = NA_character_)
+  tibble(year = NA_integer_, month = NA_integer_, trans_month = NA_character_)
 }
 
 
@@ -246,32 +246,32 @@ parsed_dates <- excel$impl_time |>
 
 excel <- bind_cols(excel, parsed_dates)
 
-# ── For each company × classification, get the FIRST quarter ─────────────────
+# ── For each company × classification, get the FIRST month ───────────────────
 first_event <- excel |>
   filter(!is.na(year), classification %in% c("Automation", "Augmentation", "Both")) |>
   group_by(company, classification) |>
-  slice_min(order_by = year * 10 + quarter, n = 1) |>   # earliest year+quarter
+  slice_min(order_by = year * 100 + month, n = 1) |>   # earliest year+month
   ungroup() |>
-  select(company, classification, trans_year = year, trans_quarter)
+  select(company, classification, trans_year = year, trans_month)
 
 # Pivot wide: one row per company
 first_event_wide <- first_event |>
   pivot_wider(
     names_from  = classification,
-    values_from = c(trans_year, trans_quarter),
+    values_from = c(trans_year, trans_month),
     names_glue  = "{.value}_{classification}"
   )
 # Columns produced:
-# trans_year_Automation,     trans_quarter_Automation     (e.g. 2023, "2023Q2")
-# trans_year_Augmentation,   trans_quarter_Augmentation
-# trans_year_Both,           trans_quarter_Both
+# trans_year_Automation,     trans_month_Automation     (e.g. 2023, "2023-04")
+# trans_year_Augmentation,   trans_month_Augmentation
+# trans_year_Both,           trans_month_Both
 
 # ── Quick check ───────────────────────────────────────────────────────────────
 glimpse(first_event_wide)
 print(first_event_wide, n = 10)
 
 
-# In your panel, year_quarter is already like "2021Q2"
+# In your panel, month is already like "2021-01"
 # Join crosswalk first, then:
 panel <- combined
 
@@ -282,22 +282,22 @@ panel <- panel |>
   mutate(TIME = row_number() - 1) |>
   ungroup()
 
-# Helper: given a trans_quarter string ("2023Q2"), find its TIME index
+# Helper: given a trans_month string ("2023-04"), find its TIME index
 panel <- panel |>
   group_by(rcid) |>
   mutate(
     # ── Automation ──
-    trans_idx_auto  = match(trans_quarter_Automation,  year_quarter) - 1L,
+    trans_idx_auto  = match(trans_month_Automation,  month) - 1L,
     TRANS_auto      = if_else(!is.na(trans_idx_auto) & TIME >= trans_idx_auto, 1L, 0L),
     RECOV_auto      = if_else(!is.na(trans_idx_auto) & TIME >= trans_idx_auto,
                               TIME - trans_idx_auto, 0L),
     # ── Augmentation ──
-    trans_idx_aug   = match(trans_quarter_Augmentation, year_quarter) - 1L,
+    trans_idx_aug   = match(trans_month_Augmentation, month) - 1L,
     TRANS_aug       = if_else(!is.na(trans_idx_aug)  & TIME >= trans_idx_aug,  1L, 0L),
     RECOV_aug       = if_else(!is.na(trans_idx_aug)  & TIME >= trans_idx_aug,
                               TIME - trans_idx_aug,  0L),
     # ── Both ──
-    trans_idx_both  = match(trans_quarter_Both,        year_quarter) - 1L,
+    trans_idx_both  = match(trans_month_Both,        month) - 1L,
     TRANS_both      = if_else(!is.na(trans_idx_both) & TIME >= trans_idx_both, 1L, 0L),
     RECOV_both      = if_else(!is.na(trans_idx_both) & TIME >= trans_idx_both,
                               TIME - trans_idx_both, 0L)
@@ -363,7 +363,7 @@ for (outcome in outcomes) {
     }
     
     dat <- panel |>
-      select(rcid, year_quarter, TIME,
+      select(rcid, month, TIME,
              TRANS = all_of(TRANS_col),
              RECOV = all_of(RECOV_col),
              DV    = all_of(outcome)) |>
@@ -491,8 +491,8 @@ coef_summary <- lapply(results_list, function(r) {
   bind_rows() |>
   select(outcome, classification, icc, term, Value, Std.Error, `t-value`, `p-value`)
 
-write_csv(coef_summary, "/Users/hanyimin/Dropbox/Haylee/UIUC/research/AI adoption & KSAOs requirement/data/discontinuous_growth_results_categories.csv")
-cat("\nDone! Results saved to discontinuous_growth_results_categories.csv\n")
+write_csv(coef_summary, "/Users/hanyimin/Dropbox/Haylee/UIUC/research/AI adoption & KSAOs requirement/data/discontinuous_growth_results_monthly_categories.csv")
+cat("\nDone! Results saved to discontinuous_growth_results_monthly_categories.csv\n")
 cat("Total models:", length(results_list), "/", length(outcomes) * length(classifications), "\n")
 
 
